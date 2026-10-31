@@ -1,0 +1,365 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // PRIMITIVE HELPERS
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'satshwe36@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator'
+      );
+    }
+
+    // =========================================================================
+    // VALIDATION BLUEPRINTS (From firebase-blueprint.json)
+    // =========================================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'password', 'email', 'displayName', 'role', 'department', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'password', 'email', 'displayName', 'role', 'department', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.password is string && data.password.size() >= 4 && data.password.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.role is string && (data.role == 'Administrator' || data.role == 'Chief Engineer' || data.role == 'Field Engineer' || data.role == 'Viewer') &&
+        data.department is string && data.department.size() >= 1 && data.department.size() <= 120 &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidInspectionSyncRecord(data) {
+      return data.keys().hasAll([
+          'id', 'reportNo', 'centerId', 'centerCode', 'centerName',
+          'generatorId', 'kvaRating', 'gensetModel', 'inspectionDate',
+          'inspectorName', 'healthScore', 'readinessStatus',
+          'syncVersion', 'clientUpdatedAtMs', 'authorUid', 'reportData', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'reportNo', 'centerId', 'centerCode', 'centerName',
+          'generatorId', 'kvaRating', 'gensetModel', 'inspectionDate',
+          'inspectorName', 'healthScore', 'readinessStatus',
+          'syncVersion', 'clientUpdatedAtMs', 'authorUid', 'reportData', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.reportNo is string && data.reportNo.size() >= 1 && data.reportNo.size() <= 32 &&
+        data.centerId is string && data.centerId.size() >= 1 && data.centerId.size() <= 64 &&
+        data.centerCode is string && data.centerCode.size() >= 1 && data.centerCode.size() <= 32 &&
+        data.centerName is string && data.centerName.size() >= 1 && data.centerName.size() <= 200 &&
+        data.generatorId is string && data.generatorId.size() >= 1 && data.generatorId.size() <= 64 &&
+        data.kvaRating is string && data.kvaRating.size() >= 1 && data.kvaRating.size() <= 64 &&
+        data.gensetModel is string && data.gensetModel.size() <= 64 &&
+        data.inspectionDate is string && data.inspectionDate.size() >= 1 && data.inspectionDate.size() <= 32 &&
+        data.inspectorName is string && data.inspectorName.size() <= 120 &&
+        data.healthScore is number && data.healthScore >= 0 && data.healthScore <= 100 &&
+        data.readinessStatus is string && (data.readinessStatus == 'Ready' || data.readinessStatus == 'Action Required' || data.readinessStatus == 'Critical') &&
+        data.syncVersion is number && data.syncVersion >= 1 &&
+        data.clientUpdatedAtMs is number && data.clientUpdatedAtMs >= 0 &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+        data.reportData is map &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidAlertNotification(data) {
+      return data.keys().hasAll([
+          'id', 'triggerType', 'severity', 'title', 'message',
+          'centerCode', 'generatorId', 'reportNo', 'recipientsSummary',
+          'emailDispatched', 'read', 'authorUid', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'triggerType', 'severity', 'title', 'message',
+          'centerCode', 'generatorId', 'reportNo', 'recipientsSummary',
+          'emailDispatched', 'read', 'authorUid', 'createdAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.triggerType is string && (data.triggerType == 'CRITICAL_READINESS' || data.triggerType == 'BAD_CHECKLIST_ITEM' || data.triggerType == 'MAINTENANCE_REMINDER') &&
+        data.severity is string && (data.severity == 'Critical' || data.severity == 'Warning' || data.severity == 'Info') &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.message is string && data.message.size() >= 1 && data.message.size() <= 1000 &&
+        data.centerCode is string && data.centerCode.size() >= 1 && data.centerCode.size() <= 32 &&
+        data.generatorId is string && data.generatorId.size() >= 1 && data.generatorId.size() <= 64 &&
+        data.reportNo is string && data.reportNo.size() >= 1 && data.reportNo.size() <= 32 &&
+        data.recipientsSummary is string && data.recipientsSummary.size() >= 1 && data.recipientsSummary.size() <= 500 &&
+        data.emailDispatched is bool &&
+        data.read is bool &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidNotificationRuleConfig(data) {
+      return data.keys().hasAll([
+          'id', 'triggerType', 'name', 'enabled',
+          'inAppPushEnabled', 'emailEnabled', 'recipientsCsv',
+          'updatedBy', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'triggerType', 'name', 'enabled',
+          'inAppPushEnabled', 'emailEnabled', 'recipientsCsv',
+          'updatedBy', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.triggerType is string && (data.triggerType == 'CRITICAL_READINESS' || data.triggerType == 'BAD_CHECKLIST_ITEM' || data.triggerType == 'MAINTENANCE_REMINDER') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.enabled is bool &&
+        data.inAppPushEnabled is bool &&
+        data.emailEnabled is bool &&
+        data.recipientsCsv is string && data.recipientsCsv.size() >= 3 && data.recipientsCsv.size() <= 1000 &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidCenterAsset(data) {
+      return data.keys().hasAll([
+          'id', 'centerCode', 'centerName', 'address',
+          'township', 'contactPerson', 'contactPhone', 'region', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'centerCode', 'centerName', 'address',
+          'township', 'contactPerson', 'contactPhone', 'region', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.centerCode is string && data.centerCode.size() >= 1 && data.centerCode.size() <= 32 &&
+        data.centerName is string && data.centerName.size() >= 1 && data.centerName.size() <= 200 &&
+        data.address is string && data.address.size() >= 1 && data.address.size() <= 300 &&
+        data.township is string && data.township.size() >= 1 && data.township.size() <= 120 &&
+        data.contactPerson is string && data.contactPerson.size() >= 1 && data.contactPerson.size() <= 120 &&
+        data.contactPhone is string && data.contactPhone.size() >= 1 && data.contactPhone.size() <= 64 &&
+        data.region is string && (
+          data.region == 'Yangon' ||
+          data.region == 'Mandalay' ||
+          data.region == 'Naypyitaw' ||
+          data.region == 'Upper Myanmar' ||
+          data.region == 'Lower Myanmar'
+        ) &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidGeneratorAssetRecord(data) {
+      return data.keys().hasAll([
+          'id', 'centerId', 'centerCode', 'generatorLabel', 'kvaRating',
+          'gensetModel', 'gensetSerialNo', 'engineModel', 'engineSerialNo',
+          'alternatorModel', 'alternatorSerialNo', 'controllerModel', 'avrModel',
+          'breakerType', 'breakerPoles', 'breakerAmpRating', 'status', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'centerId', 'centerCode', 'generatorLabel', 'kvaRating',
+          'gensetModel', 'gensetSerialNo', 'engineModel', 'engineSerialNo',
+          'alternatorModel', 'alternatorSerialNo', 'controllerModel', 'avrModel',
+          'breakerType', 'breakerPoles', 'breakerAmpRating', 'status', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.centerId is string && data.centerId.size() >= 1 && data.centerId.size() <= 64 &&
+        data.centerCode is string && data.centerCode.size() >= 1 && data.centerCode.size() <= 32 &&
+        data.generatorLabel is string && data.generatorLabel.size() >= 1 && data.generatorLabel.size() <= 120 &&
+        data.kvaRating is string && data.kvaRating.size() >= 1 && data.kvaRating.size() <= 64 &&
+        data.gensetModel is string && data.gensetModel.size() <= 64 &&
+        data.gensetSerialNo is string && data.gensetSerialNo.size() <= 64 &&
+        data.engineModel is string && data.engineModel.size() <= 64 &&
+        data.engineSerialNo is string && data.engineSerialNo.size() <= 64 &&
+        data.alternatorModel is string && data.alternatorModel.size() <= 64 &&
+        data.alternatorSerialNo is string && data.alternatorSerialNo.size() <= 64 &&
+        data.controllerModel is string && data.controllerModel.size() <= 64 &&
+        data.avrModel is string && data.avrModel.size() <= 64 &&
+        data.breakerType is string && (data.breakerType == 'ACB' || data.breakerType == 'MCCB') &&
+        data.breakerPoles is string && (data.breakerPoles == '3P' || data.breakerPoles == '4P') &&
+        data.breakerAmpRating is string && data.breakerAmpRating.size() >= 1 && data.breakerAmpRating.size() <= 32 &&
+        data.status is string && (data.status == 'Active' || data.status == 'Standby' || data.status == 'Maintenance') &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidAppConfigRecord(data) {
+      return data.keys().hasAll(['id', 'configType', 'configData', 'updatedBy', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'configType', 'configData', 'updatedBy', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.configType is string && data.configType.size() >= 1 && data.configType.size() <= 64 &&
+        data.configData is map &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+        data.updatedAt == request.time;
+    }
+
+    // =========================================================================
+    // COLLECTION 1: /users/{userId} (Firebase UID & Password Credential Store)
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+
+      allow create: if isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId;
+
+      allow update: if isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'email', 'department', 'role', 'password', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(userId) && (isAdmin() || resource.data.uid == userId);
+    }
+
+    // =========================================================================
+    // COLLECTION 2: /reports/{reportId} (Cloud Sync Target for All Forms & Reports)
+    // =========================================================================
+    match /reports/{reportId} {
+      allow get: if isValidId(reportId);
+      allow list: if true;
+
+      allow create: if isValidId(reportId) &&
+        isValidInspectionSyncRecord(incoming()) &&
+        incoming().id == reportId;
+
+      allow update: if isValidId(reportId) &&
+        isValidInspectionSyncRecord(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().syncVersion >= existing().syncVersion &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'reportNo', 'centerId', 'centerCode', 'centerName',
+          'generatorId', 'kvaRating', 'gensetModel', 'inspectionDate',
+          'inspectorName', 'healthScore', 'readinessStatus',
+          'syncVersion', 'clientUpdatedAtMs', 'authorUid', 'reportData', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(reportId) && (isAdmin() || resource.data.id == reportId);
+    }
+
+    // =========================================================================
+    // COLLECTION 3: /notifications/{notificationId}
+    // =========================================================================
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId);
+      allow list: if true;
+
+      allow create: if isValidId(notificationId) &&
+        isValidAlertNotification(incoming()) &&
+        incoming().id == notificationId &&
+        incoming().createdAt == request.time;
+
+      allow update: if isValidId(notificationId) &&
+        isValidAlertNotification(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['read', 'emailDispatched']);
+
+      allow delete: if isValidId(notificationId) && (isAdmin() || resource.data.id == notificationId);
+    }
+
+    // =========================================================================
+    // COLLECTION 4: /notificationConfigs/{configId}
+    // =========================================================================
+    match /notificationConfigs/{configId} {
+      allow get: if isValidId(configId);
+      allow list: if true;
+
+      allow create: if isValidId(configId) &&
+        isValidNotificationRuleConfig(incoming()) &&
+        incoming().id == configId;
+
+      allow update: if isValidId(configId) &&
+        isValidNotificationRuleConfig(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().triggerType == existing().triggerType &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'enabled', 'inAppPushEnabled', 'emailEnabled',
+          'recipientsCsv', 'updatedBy', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(configId) && (isAdmin() || resource.data.id == configId);
+    }
+
+    // =========================================================================
+    // COLLECTION 5: /centers/{centerId} (Master Center Assets)
+    // =========================================================================
+    match /centers/{centerId} {
+      allow get: if isValidId(centerId);
+      allow list: if true;
+
+      allow create: if isValidId(centerId) &&
+        isValidCenterAsset(incoming()) &&
+        incoming().id == centerId;
+
+      allow update: if isValidId(centerId) &&
+        isValidCenterAsset(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'centerCode', 'centerName', 'address', 'township',
+          'contactPerson', 'contactPhone', 'region', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(centerId) && (isAdmin() || resource.data.id == centerId);
+    }
+
+    // =========================================================================
+    // COLLECTION 6: /generators/{generatorId} (Master Generator Assets)
+    // =========================================================================
+    match /generators/{generatorId} {
+      allow get: if isValidId(generatorId);
+      allow list: if true;
+
+      allow create: if isValidId(generatorId) &&
+        isValidGeneratorAssetRecord(incoming()) &&
+        incoming().id == generatorId;
+
+      allow update: if isValidId(generatorId) &&
+        isValidGeneratorAssetRecord(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'centerId', 'centerCode', 'generatorLabel', 'kvaRating',
+          'gensetModel', 'gensetSerialNo', 'engineModel', 'engineSerialNo',
+          'alternatorModel', 'alternatorSerialNo', 'controllerModel', 'avrModel',
+          'breakerType', 'breakerPoles', 'breakerAmpRating', 'status', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(generatorId) && (isAdmin() || resource.data.id == generatorId);
+    }
+
+    // =========================================================================
+    // COLLECTION 7: /appConfigs/{configId} (Cloud Form Templates, Sector Names & Email Rules)
+    // =========================================================================
+    match /appConfigs/{configId} {
+      allow get: if isValidId(configId);
+      allow list: if true;
+
+      allow create: if isValidId(configId) &&
+        isValidAppConfigRecord(incoming()) &&
+        incoming().id == configId;
+
+      allow update: if isValidId(configId) &&
+        isValidAppConfigRecord(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().configType == existing().configType &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'configData', 'updatedBy', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(configId) && (isAdmin() || resource.data.id == configId);
+    }
+  }
+}

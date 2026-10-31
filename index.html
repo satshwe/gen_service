@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var currentFetch = window.fetch ? window.fetch.bind(window) : undefined;
+          if (currentFetch) {
+            Object.defineProperty(window, 'fetch', {
+              configurable: true,
+              enumerable: true,
+              get: function () {
+                return currentFetch;
+              },
+              set: function (fn) {
+                if (typeof fn === 'function') {
+                  currentFetch = fn;
+                }
+              },
+            });
+          }
+        } catch (e) {
+          // Ignore if environment locks Object.defineProperty
+        }
+      })();
+    </script>
+    <title>City Properties Co., Ltd — Generator Service, Inspection & Analytics System</title>
+    <meta name="description" content="Industrial generator maintenance, 25-point bilingual inspection checklist (Gen SOP-002), dynamic asset management for 31+ centers and 62+ generators, and executive reliability analytics for City Properties Co., Ltd." />
+    <meta property="og:title" content="City Properties Co., Ltd — Generator Service, Inspection & Analytics System" />
+    <meta property="og:description" content="Industrial generator maintenance, 25-point bilingual inspection checklist (Gen SOP-002), dynamic asset management for 31+ centers and 62+ generators, and executive reliability analytics." />
+    <meta property="og:image" content="/assets/aistudio/cp_logo_cb60fbe9.jfif" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/jpeg" href="/assets/aistudio/cp_logo_cb60fbe9.jfif" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Myanmar:wght@400;500;600;700&family=Padauk:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

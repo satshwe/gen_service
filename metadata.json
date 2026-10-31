@@ -1,0 +1,6 @@
+{
+  "name": "City Properties Generator Service & Analytics System",
+  "description": "Industrial generator maintenance, 25-point bilingual inspection checklist (Gen SOP-002), dynamic asset management for 31+ centers and 62+ generators, and executive reliability analytics for City Properties Co., Ltd.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
