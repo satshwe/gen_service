@@ -17,10 +17,11 @@ import {
   AlertNotification,
   NotificationRuleConfig,
   UserProfile,
+  DutyAssignment,
 } from '../types';
 
 const DB_NAME = 'CityPropertiesGeneratorDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORES = {
   CENTERS: 'centers',
@@ -31,6 +32,7 @@ export const STORES = {
   NOTIFICATIONS: 'notifications',
   NOTIFICATION_CONFIGS: 'notification_configs',
   USERS: 'users',
+  DUTY_ASSIGNMENTS: 'duty_assignments',
 } as const;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -66,6 +68,9 @@ export function openAppIndexedDB(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains(STORES.USERS)) {
         database.createObjectStore(STORES.USERS, { keyPath: 'uid' });
+      }
+      if (!database.objectStoreNames.contains(STORES.DUTY_ASSIGNMENTS)) {
+        database.createObjectStore(STORES.DUTY_ASSIGNMENTS, { keyPath: 'id' });
       }
     };
 
@@ -1349,5 +1354,125 @@ export async function saveAppConfigToFirestore(
     }
   }
 }
+
+/**
+ * Saves or updates a duty assignment in Firestore /dutyAssignments/{assignmentId}
+ */
+export async function saveDutyAssignmentToFirestore(
+  assignment: DutyAssignment
+): Promise<void> {
+  const docId = sanitizeFirestoreId(assignment.id);
+  const path = `dutyAssignments/${docId}`;
+
+  try {
+    await setDoc(
+      doc(db, 'dutyAssignments', docId),
+      {
+        ...assignment,
+        id: docId,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Missing or insufficient permissions')
+    ) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  }
+}
+
+/**
+ * Deletes a duty assignment from Firestore
+ */
+export async function deleteDutyAssignmentFromFirestore(
+  assignmentId: string
+): Promise<void> {
+  const docId = sanitizeFirestoreId(assignmentId);
+  const path = `dutyAssignments/${docId}`;
+
+  try {
+    await deleteDoc(doc(db, 'dutyAssignments', docId));
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Missing or insufficient permissions')
+    ) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+}
+
+/**
+ * Syncs duty assignments between Firestore and IndexedDB
+ */
+export async function syncDutyAssignmentsWithFirestore(
+  localAssignments: DutyAssignment[]
+): Promise<DutyAssignment[]> {
+  try {
+    const snap = await getDocs(collection(db, 'dutyAssignments'));
+    if (snap.empty) {
+      // Seed remote Firestore if empty
+      for (const item of localAssignments) {
+        await saveDutyAssignmentToFirestore(item);
+      }
+      return localAssignments;
+    }
+
+    const remoteMap = new Map<string, DutyAssignment>();
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      remoteMap.set(docSnap.id, {
+        id: docSnap.id,
+        taskType: d.taskType || 'REGULAR_INSPECTION',
+        centerId: String(d.centerId || ''),
+        centerCode: String(d.centerCode || ''),
+        centerName: String(d.centerName || ''),
+        generatorId: String(d.generatorId || ''),
+        generatorLabel: String(d.generatorLabel || ''),
+        assignedEngineerUid: String(d.assignedEngineerUid || ''),
+        assignedEngineerName: String(d.assignedEngineerName || ''),
+        assignedEngineerEmail: String(d.assignedEngineerEmail || ''),
+        assignedByUid: String(d.assignedByUid || ''),
+        assignedByName: String(d.assignedByName || ''),
+        scheduledDate: String(d.scheduledDate || ''),
+        priority: d.priority || 'Routine',
+        notes: d.notes || '',
+        status: d.status || 'SCHEDULED',
+        completedReportId: d.completedReportId,
+        completedReportNo: d.completedReportNo,
+        completedAt: d.completedAt,
+        createdAt: d.createdAt?.toDate?.()?.toISOString?.() || d.createdAt || new Date().toISOString(),
+        updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || d.updatedAt || new Date().toISOString(),
+      });
+    });
+
+    // Merge remote with local
+    const mergedMap = new Map<string, DutyAssignment>();
+    localAssignments.forEach((a) => mergedMap.set(a.id, a));
+    remoteMap.forEach((a, id) => mergedMap.set(id, a));
+
+    const merged = Array.from(mergedMap.values()).sort((a, b) =>
+      a.scheduledDate.localeCompare(b.scheduledDate)
+    );
+
+    for (const a of merged) {
+      await idbPut(STORES.DUTY_ASSIGNMENTS, a);
+    }
+
+    return merged;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Missing or insufficient permissions')
+    ) {
+      handleFirestoreError(error, OperationType.LIST, 'dutyAssignments');
+    }
+    return localAssignments;
+  }
+}
+
 
 

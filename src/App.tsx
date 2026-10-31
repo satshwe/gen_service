@@ -38,6 +38,7 @@ import {
   Wrench,
   Clock,
   ChevronRight,
+  Calendar,
 } from 'lucide-react';
 import {
   Center,
@@ -51,8 +52,9 @@ import {
   NotificationRuleConfig,
   FormCategory,
   ActivityResolutionDetails,
+  DutyAssignment,
 } from './types';
-import { INITIAL_CENTERS, INITIAL_GENERATORS, INITIAL_REPORTS } from './data/seedData';
+import { INITIAL_CENTERS, INITIAL_GENERATORS, INITIAL_REPORTS, INITIAL_DUTY_ASSIGNMENTS } from './data/seedData';
 import {
   auth,
   db,
@@ -88,6 +90,9 @@ import {
   syncGeneratorsWithFirestore,
   saveNotificationConfigToFirestore,
   syncNotificationConfigsWithFirestore,
+  saveDutyAssignmentToFirestore,
+  deleteDutyAssignmentFromFirestore,
+  syncDutyAssignmentsWithFirestore,
 } from './utils/indexedDbSync';
 import {
   evaluateReportTriggers,
@@ -97,6 +102,7 @@ import {
 import { applyRemoteChecklistAppConfig } from './data/checklistConfig';
 import { applyRemoteExportAppConfig } from './utils/exportUtils';
 import { ExecutiveDashboardModule } from './components/ExecutiveDashboardModule';
+import { DutyCalendarModule } from './components/DutyCalendarModule';
 import { InspectionFormModule } from './components/InspectionFormModule';
 import { ReportsArchiveModule } from './components/ReportsArchiveModule';
 import { MasterAssetModule } from './components/MasterAssetModule';
@@ -111,6 +117,7 @@ const AUTH_SESSION_STORAGE_KEY = 'cp_firebase_uid_session_v1';
 
 type ActiveModule =
   | 'dashboard'
+  | 'duty_calendar'
   | 'inspection_form'
   | 'activities'
   | 'reports_archive'
@@ -124,6 +131,8 @@ export default function App() {
   const [centers, setCenters] = useState<Center[]>(INITIAL_CENTERS);
   const [generators, setGenerators] = useState<GeneratorAsset[]>(INITIAL_GENERATORS);
   const [reports, setReports] = useState<InspectionReport[]>(INITIAL_REPORTS);
+  const [dutyAssignments, setDutyAssignments] = useState<DutyAssignment[]>(INITIAL_DUTY_ASSIGNMENTS);
+  const [activeDutyAssignmentId, setActiveDutyAssignmentId] = useState<string | null>(null);
 
   // Offline Sync & Conflict State
   const [browserOnline, setBrowserOnline] = useState<boolean>(
@@ -203,6 +212,7 @@ export default function App() {
           storedNotifs,
           storedConfigs,
           storedUsers,
+          storedDuties,
         ] = await Promise.all([
           idbGetAll<Center>(STORES.CENTERS),
           idbGetAll<GeneratorAsset>(STORES.GENERATORS),
@@ -212,9 +222,18 @@ export default function App() {
           idbGetAll<AlertNotification>(STORES.NOTIFICATIONS),
           idbGetAll<NotificationRuleConfig>(STORES.NOTIFICATION_CONFIGS),
           idbGetAll<UserProfile>(STORES.USERS),
+          idbGetAll<DutyAssignment>(STORES.DUTY_ASSIGNMENTS),
         ]);
 
         if (!mounted) return;
+
+        const initialLocalDuties =
+          storedDuties.length > 0 ? storedDuties : INITIAL_DUTY_ASSIGNMENTS;
+        if (storedDuties.length > 0) {
+          setDutyAssignments(storedDuties);
+        } else {
+          await idbPutMany(STORES.DUTY_ASSIGNMENTS, INITIAL_DUTY_ASSIGNMENTS);
+        }
 
         const initialLocalCenters =
           storedCenters.length > 0 ? storedCenters : INITIAL_CENTERS;
@@ -325,12 +344,14 @@ export default function App() {
             syncedFirebaseCenters,
             syncedFirebaseGenerators,
             syncedFirebaseConfigs,
+            syncedFirebaseDuties,
           ] = await Promise.all([
             syncAuthorizedUsersWithFirestore(initialLocalUsers),
             syncReportsWithFirestore(initialLocalReports),
             syncCentersWithFirestore(initialLocalCenters),
             syncGeneratorsWithFirestore(initialLocalGenerators),
             syncNotificationConfigsWithFirestore(initialLocalConfigs),
+            syncDutyAssignmentsWithFirestore(initialLocalDuties),
           ]);
 
           if (mounted) {
@@ -350,6 +371,9 @@ export default function App() {
             }
             if (syncedFirebaseConfigs.length > 0) {
               setNotificationConfigs(syncedFirebaseConfigs);
+            }
+            if (syncedFirebaseDuties.length > 0) {
+              setDutyAssignments(syncedFirebaseDuties);
             }
           }
         } else if (mounted) {
@@ -671,6 +695,50 @@ export default function App() {
       }
     );
 
+    // 3G. Duty Assignments listener (/dutyAssignments)
+    const dutiesPath = 'dutyAssignments';
+    const unsubDuties = onSnapshot(
+      collection(db, dutiesPath),
+      async (snapshot) => {
+        if (snapshot.empty) return;
+        const remoteDuties: DutyAssignment[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          remoteDuties.push({
+            id: docSnap.id,
+            taskType: d.taskType || 'REGULAR_INSPECTION',
+            centerId: String(d.centerId || ''),
+            centerCode: String(d.centerCode || ''),
+            centerName: String(d.centerName || ''),
+            generatorId: String(d.generatorId || ''),
+            generatorLabel: String(d.generatorLabel || ''),
+            assignedEngineerUid: String(d.assignedEngineerUid || ''),
+            assignedEngineerName: String(d.assignedEngineerName || ''),
+            assignedEngineerEmail: String(d.assignedEngineerEmail || ''),
+            assignedByUid: String(d.assignedByUid || ''),
+            assignedByName: String(d.assignedByName || ''),
+            scheduledDate: String(d.scheduledDate || ''),
+            priority: d.priority || 'Routine',
+            notes: d.notes || '',
+            status: d.status || 'SCHEDULED',
+            completedReportId: d.completedReportId,
+            completedReportNo: d.completedReportNo,
+            completedAt: d.completedAt,
+            createdAt: d.createdAt?.toDate?.()?.toISOString?.() || d.createdAt || new Date().toISOString(),
+            updatedAt: d.updatedAt?.toDate?.()?.toISOString?.() || d.updatedAt || new Date().toISOString(),
+          });
+        });
+        if (remoteDuties.length > 0) {
+          const sorted = remoteDuties.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+          await idbPutMany(STORES.DUTY_ASSIGNMENTS, sorted);
+          setDutyAssignments(sorted);
+        }
+      },
+      (error) => {
+        console.warn('Firestore dutyAssignments listener notice:', error);
+      }
+    );
+
     return () => {
       unsubReports();
       unsubCenters();
@@ -678,6 +746,7 @@ export default function App() {
       unsubNotifs();
       unsubConfigs();
       unsubAppConfigs();
+      unsubDuties();
     };
   }, [effectiveOnline]);
 
@@ -773,6 +842,35 @@ export default function App() {
       await handleSyncQueue();
     }
 
+    // Auto-complete matching pending Duty Assignment
+    const matchingAssignment = dutyAssignments.find((a) => {
+      if (a.status === 'COMPLETED') return false;
+      if (activeDutyAssignmentId && a.id === activeDutyAssignmentId) return true;
+      const categoryMatches =
+        (report.formCategory === 'REGULAR_SERVICING_300HR' && a.taskType === 'REGULAR_SERVICING_300HR') ||
+        (report.formCategory !== 'REGULAR_SERVICING_300HR' && a.taskType === 'REGULAR_INSPECTION');
+      return a.centerId === report.centerId && a.generatorId === report.generatorId && categoryMatches;
+    });
+
+    if (matchingAssignment) {
+      const updatedDuty: DutyAssignment = {
+        ...matchingAssignment,
+        status: 'COMPLETED',
+        completedReportId: savedReport.id,
+        completedReportNo: savedReport.reportNo,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await idbPut(STORES.DUTY_ASSIGNMENTS, updatedDuty);
+      setDutyAssignments((prev) =>
+        prev.map((a) => (a.id === updatedDuty.id ? updatedDuty : a))
+      );
+      if (effectiveOnline) {
+        await saveDutyAssignmentToFirestore(updatedDuty);
+      }
+      setActiveDutyAssignmentId(null);
+    }
+
     setEditingReport(null);
     if (openPrintAfterSave) {
       setSelectedReportForPrint(savedReport);
@@ -788,6 +886,55 @@ export default function App() {
     setSyncQueue((prev) => prev.filter((q) => q.entityId !== id));
     if (effectiveOnline) {
       await deleteReportFromFirestore(id);
+    }
+  };
+
+  const handleSaveDutyAssignment = async (assignment: DutyAssignment) => {
+    await idbPut(STORES.DUTY_ASSIGNMENTS, assignment);
+    setDutyAssignments((prev) => {
+      const idx = prev.findIndex((a) => a.id === assignment.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = assignment;
+        return copy.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+      }
+      return [...prev, assignment].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    });
+
+    if (effectiveOnline) {
+      await saveDutyAssignmentToFirestore(assignment);
+    }
+
+    // Dispatch notification to assigned engineer
+    try {
+      const notifItem: AlertNotification = {
+        id: `NOTIF_DUTY_${Date.now()}`,
+        triggerType: 'MAINTENANCE_REMINDER',
+        severity: assignment.priority === 'Overdue' ? 'Critical' : 'Info',
+        title: `Duty Assigned: ${assignment.taskType === 'REGULAR_SERVICING_300HR' ? '300-Hr Servicing' : 'Regular Inspection'} at ${assignment.centerCode}`,
+        message: `${assignment.assignedByName} assigned you to conduct ${assignment.taskType === 'REGULAR_SERVICING_300HR' ? '300-Hour Preventive Servicing' : 'Regular Inspection'} at ${assignment.centerName} (${assignment.generatorLabel}) scheduled on ${assignment.scheduledDate}. Notes: ${assignment.notes || 'Routine duty'}.`,
+        centerCode: assignment.centerCode,
+        generatorId: assignment.generatorId,
+        reportNo: assignment.id,
+        recipientsSummary: assignment.assignedEngineerEmail || 'Assigned Field Engineer',
+        emailDispatched: true,
+        read: false,
+        authorUid: currentUser.uid,
+        createdAt: new Date().toISOString(),
+      };
+      await idbPut(STORES.NOTIFICATIONS, notifItem);
+      setNotifications((prev) => [notifItem, ...prev]);
+      setLivePushToast(notifItem);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDeleteDutyAssignment = async (id: string) => {
+    await idbDelete(STORES.DUTY_ASSIGNMENTS, id);
+    setDutyAssignments((prev) => prev.filter((a) => a.id !== id));
+    if (effectiveOnline) {
+      await deleteDutyAssignmentFromFirestore(id);
     }
   };
 
@@ -836,12 +983,14 @@ export default function App() {
   const handleStartNewInspection = (
     centerId?: string,
     generatorId?: string,
-    formCategory: FormCategory = 'REGULAR_INSPECTION'
+    formCategory: FormCategory = 'REGULAR_INSPECTION',
+    assignmentId?: string
   ) => {
     if (!canCreateOrEdit) {
       setActiveModule('role_management');
       return;
     }
+    setActiveDutyAssignmentId(assignmentId || null);
     setActiveFormCategory(formCategory);
     setFormSessionKey((prev) => prev + 1);
     if (centerId) {
@@ -877,6 +1026,8 @@ export default function App() {
         breakerAmpRating: gen.breakerAmpRating,
         customerName: center.contactPerson,
         customerSignName: center.contactPerson,
+        inspectorName: currentUser.displayName || currentUser.uid,
+        inspectorEmail: currentUser.email,
         inspectionDate: new Date().toISOString().slice(0, 10),
         syncVersion: 1,
       });
@@ -1274,6 +1425,25 @@ export default function App() {
               Analytics
             </button>
 
+            {/* Engineer Duty Calendar (Shared across all roles: Chief Engineer, Service Engineer, Viewer, Admin) */}
+            <button
+              type="button"
+              onClick={() => setActiveModule('duty_calendar')}
+              className={`py-1 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                activeModule === 'duty_calendar'
+                  ? 'text-white font-semibold underline underline-offset-8 decoration-2'
+                  : 'hover:text-white'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-teal-400" />
+              <span>Duty Calendar</span>
+              {dutyAssignments.filter((d) => d.status === 'SCHEDULED').length > 0 && (
+                <span className="px-1.5 py-0.2 bg-teal-500 text-slate-900 text-[10px] font-bold rounded-sm">
+                  {dutyAssignments.filter((d) => d.status === 'SCHEDULED').length}
+                </span>
+              )}
+            </button>
+
             {/* Inspection & Servicing Forms — Hidden for Viewer role */}
             {currentUser.role !== 'Viewer' && (
               <>
@@ -1553,6 +1723,8 @@ export default function App() {
             centers={centers}
             generators={generators}
             reports={reports}
+            dutyAssignments={dutyAssignments}
+            onOpenDutyCalendarTab={() => setActiveModule('duty_calendar')}
             onOpenReportPdf={handleOpenReportPdf}
             onStartInspection={handleStartNewInspection}
             onOpenActivitiesTab={() => setActiveModule('activities')}
@@ -1561,6 +1733,25 @@ export default function App() {
             onOpenNotificationsCenter={() => setActiveModule('notifications')}
             currentUserRole={currentUser.role}
             currentUserName={currentUser.displayName}
+          />
+        )}
+
+        {activeModule === 'duty_calendar' && (
+          <DutyCalendarModule
+            assignments={dutyAssignments}
+            centers={centers}
+            generators={generators}
+            usersDirectory={usersDirectory}
+            currentUser={currentUser}
+            onSaveAssignment={handleSaveDutyAssignment}
+            onDeleteAssignment={handleDeleteDutyAssignment}
+            onStartInspection={(centerId, generatorId, formCategory, assignmentId) =>
+              handleStartNewInspection(centerId, generatorId, formCategory, assignmentId)
+            }
+            onViewReportPdfByNo={(reportNo) => {
+              const matched = reports.find((r) => r.reportNo === reportNo);
+              if (matched) handleOpenReportPdf(matched);
+            }}
           />
         )}
 
@@ -1987,6 +2178,29 @@ export default function App() {
                   <BarChart3 className="w-4 h-4 shrink-0" />
                   <span>Executive Analytics</span>
                 </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule('duty_calendar');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                  activeModule === 'duty_calendar'
+                    ? 'bg-white text-slate-900 font-bold'
+                    : 'text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Calendar className="w-4 h-4 shrink-0 text-teal-400" />
+                  <span>Engineer Duty Calendar</span>
+                </div>
+                {dutyAssignments.filter((d) => d.status === 'SCHEDULED').length > 0 && (
+                  <span className="px-2 py-0.5 bg-teal-500 text-slate-900 text-[10px] font-bold rounded">
+                    {dutyAssignments.filter((d) => d.status === 'SCHEDULED').length}
+                  </span>
+                )}
               </button>
 
               <button

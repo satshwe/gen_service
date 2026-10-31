@@ -28,7 +28,7 @@ import {
   Bell,
   Building2,
 } from 'lucide-react';
-import { Center, GeneratorAsset, InspectionReport, FormCategory, UserRole } from '../types';
+import { Center, GeneratorAsset, InspectionReport, FormCategory, UserRole, DutyAssignment } from '../types';
 import {
   exportInspectionsToExcel,
   formatDateDDMMYYYY,
@@ -40,6 +40,7 @@ interface ExecutiveDashboardModuleProps {
   centers: Center[];
   generators: GeneratorAsset[];
   reports: InspectionReport[];
+  dutyAssignments?: DutyAssignment[];
   onOpenReportPdf: (report: InspectionReport) => void;
   onStartInspection: (
     centerId?: string,
@@ -50,6 +51,7 @@ interface ExecutiveDashboardModuleProps {
   onOpenReportsArchive?: () => void;
   onOpenRoleManagement?: () => void;
   onOpenNotificationsCenter?: () => void;
+  onOpenDutyCalendarTab?: () => void;
   currentUserRole?: UserRole;
   currentUserName?: string;
 }
@@ -80,12 +82,14 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
   centers,
   generators,
   reports,
+  dutyAssignments = [],
   onOpenReportPdf,
   onStartInspection,
   onOpenActivitiesTab,
   onOpenReportsArchive,
   onOpenRoleManagement,
   onOpenNotificationsCenter,
+  onOpenDutyCalendarTab,
   currentUserRole = 'Administrator',
   currentUserName = 'System Administrator',
 }) => {
@@ -1945,6 +1949,17 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
                 300-Hr Countdown Bar
               </button>
             </div>
+
+            {onOpenDutyCalendarTab && (
+              <button
+                type="button"
+                onClick={onOpenDutyCalendarTab}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors whitespace-nowrap shadow-2xs"
+              >
+                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Engineer Duty Calendar ({dutyAssignments.length}) &rarr;</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -2081,6 +2096,41 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
                             +{cell.items.length - 3} more due
                           </div>
                         )}
+
+                        {/* Scheduled Duty Assignments on this Day */}
+                        {cell.dateIso && (() => {
+                          const cellDuties = dutyAssignments.filter(
+                            (a) => a.scheduledDate === cell.dateIso
+                          );
+                          if (cellDuties.length === 0) return null;
+                          return (
+                            <div className="space-y-1 mt-1 pt-1 border-t border-slate-100">
+                              {cellDuties.slice(0, 2).map((duty) => (
+                                <div
+                                  key={duty.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenDutyCalendarTab?.();
+                                  }}
+                                  className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded border truncate flex items-center justify-between gap-1 transition-transform hover:scale-[1.02] ${
+                                    duty.status === 'COMPLETED'
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                      : 'bg-slate-900 text-white border-slate-900'
+                                  }`}
+                                  title={`Assigned: ${duty.centerCode} to ${duty.assignedEngineerName} (${duty.status})`}
+                                >
+                                  <span className="truncate">👤 {duty.assignedEngineerName.split(' ')[0]}</span>
+                                  <span className="shrink-0">{duty.centerCode}</span>
+                                </div>
+                              ))}
+                              {cellDuties.length > 2 && (
+                                <div className="text-[9px] font-mono font-semibold text-slate-500 pl-0.5">
+                                  +{cellDuties.length - 2} more duties
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

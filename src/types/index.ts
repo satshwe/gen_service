@@ -349,3 +349,34 @@ export interface NotificationRuleConfig {
   updatedBy: string;
   updatedAt: string;
 }
+
+// ============================================================================
+// CHIEF ENGINEER SERVICE DUTY ASSIGNMENTS & CALENDAR SCHEDULING
+// ============================================================================
+export type DutyTaskType = 'REGULAR_INSPECTION' | 'REGULAR_SERVICING_300HR';
+export type DutyPriority = 'Routine' | 'High' | 'Overdue';
+export type DutyStatus = 'SCHEDULED' | 'DISPATCHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface DutyAssignment {
+  id: string; // e.g., "DUTY-202611-001"
+  taskType: DutyTaskType;
+  centerId: string;
+  centerCode: string;
+  centerName: string;
+  generatorId: string;
+  generatorLabel: string;
+  assignedEngineerUid: string;
+  assignedEngineerName: string;
+  assignedEngineerEmail: string;
+  assignedByUid: string;
+  assignedByName: string;
+  scheduledDate: string; // YYYY-MM-DD
+  priority: DutyPriority;
+  notes?: string;
+  status: DutyStatus;
+  completedReportId?: string;
+  completedReportNo?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}

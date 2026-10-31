@@ -369,5 +369,14 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
     }
+
+    // =========================================================================
+    // COLLECTION 9: /dutyAssignments/{assignmentId} (Chief Engineer Duty Scheduling)
+    // =========================================================================
+    match /dutyAssignments/{assignmentId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(assignmentId);
+      allow delete: if isValidId(assignmentId);
+    }
   }
 }
