@@ -26,6 +26,7 @@ import {
   ClipboardCheck,
   FileText,
   Bell,
+  Building2,
 } from 'lucide-react';
 import { Center, GeneratorAsset, InspectionReport, FormCategory, UserRole } from '../types';
 import {
@@ -1420,240 +1421,365 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
               </div>
             </div>
 
-            {/* 6 Role-Tailored Quick Action Cards */}
+            {/* Role-Tailored Quick Action Cards */}
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {/* Action 1: Log New Breakdown */}
-              <button
-                type="button"
-                disabled={activeQuickActionRole === 'Viewer'}
-                onClick={() =>
-                  onStartInspection(
-                    selectedCenterFilter !== 'ALL' ? selectedCenterFilter : undefined,
-                    undefined,
-                    'BREAKDOWN_REPORT'
-                  )
-                }
-                className="text-left p-3.5 rounded-lg border border-red-200 bg-red-50/60 hover:bg-red-100/70 transition-colors flex flex-col justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-900">
-                    <AlertOctagon className="w-4 h-4 text-red-600 shrink-0" />
-                    Log New Breakdown
-                  </span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">
-                    Step A
-                  </span>
-                </div>
-                <p className="text-[11px] text-red-900/80">
-                  Initiate emergency generator fault &amp; downtime rectification report ({kpis.breakdownReportCount} logged).
-                </p>
-              </button>
+              {activeQuickActionRole === 'Viewer' ? (
+                <>
+                  {/* Viewer Card 1: View Pending Inspections & Action Items */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenActivitiesTab) {
+                        onOpenActivitiesTab();
+                      } else {
+                        setUrgentActionFilter('ALL');
+                      }
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                        <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                        Pending Inspections &amp; Tasks
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-700 text-white">
+                        {urgentPendingActions.counts.all} Open
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/80">
+                      View pending findings, action required checklists &amp; field activity completion statuses.
+                    </p>
+                  </button>
 
-              {/* Action 2: View Pending Inspections */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (onOpenActivitiesTab) {
-                    onOpenActivitiesTab();
-                  } else {
-                    setUrgentActionFilter('ALL');
-                  }
-                }}
-                className="text-left p-3.5 rounded-lg border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 transition-colors flex flex-col justify-between gap-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950">
-                    <Clock className="w-4 h-4 text-amber-700 shrink-0" />
-                    View Pending Inspections
-                  </span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-700 text-white">
-                    {urgentPendingActions.counts.all} Open
-                  </span>
-                </div>
-                <p className="text-[11px] text-amber-900/80">
-                  Inspect open error findings, action required items &amp; mark completion dates.
-                </p>
-              </button>
+                  {/* Viewer Card 2: 300-Hr Servicing Schedule & Run Hours */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalendarViewMode('countdown_list');
+                      const el = document.getElementById('maintenance-calendar-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-950">
+                        <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
+                        300-Hr Servicing Schedule
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-700 text-white">
+                        {scheduleSummaryCounts.overdue} Overdue
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-900/80">
+                      Monitor run-hour countdowns, next service dates &amp; filter oil/coolant overhaul forecasts.
+                    </p>
+                  </button>
 
-              {/* Action 3: Log PM (Regular Inspection) */}
-              <button
-                type="button"
-                disabled={activeQuickActionRole === 'Viewer'}
-                onClick={() =>
-                  onStartInspection(
-                    selectedCenterFilter !== 'ALL' ? selectedCenterFilter : undefined,
-                    undefined,
-                    'REGULAR_INSPECTION'
-                  )
-                }
-                className="text-left p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors flex flex-col justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <ClipboardCheck className="w-4 h-4 text-slate-800 shrink-0" />
-                    Log PM (Regular Inspection)
-                  </span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">
-                    {kpis.pmRegularInspectionCount} PM
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600">
-                  Start fresh Step A 25-point monthly routine inspection form for any center.
-                </p>
-              </button>
+                  {/* Viewer Card 3: Breakdown Records & Downtime Log */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenReportsArchive) {
+                        onOpenReportsArchive();
+                      }
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-red-200 bg-red-50/60 hover:bg-red-100/70 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-950">
+                        <AlertOctagon className="w-4 h-4 text-red-600 shrink-0" />
+                        Breakdown &amp; Downtime Log
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">
+                        {kpis.breakdownReportCount} Logged
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-red-900/80">
+                      Audit past generator failures, alarm codes, downtime hours &amp; corrective actions taken.
+                    </p>
+                  </button>
 
-              {/* Action 4: Log Regular Servicing (300-Hr) */}
-              <button
-                type="button"
-                disabled={activeQuickActionRole === 'Viewer'}
-                onClick={() => {
-                  const topOverdue = generator300HrSchedules.find(
-                    (s) => s.urgency === 'OVERDUE'
-                  );
-                  onStartInspection(
-                    selectedCenterFilter !== 'ALL'
-                      ? selectedCenterFilter
-                      : topOverdue?.center.id,
-                    topOverdue?.generator.id,
-                    'REGULAR_SERVICING_300HR'
-                  );
-                }}
-                className="text-left p-3.5 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 transition-colors flex flex-col justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-950">
-                    <Wrench className="w-4 h-4 text-emerald-700 shrink-0" />
-                    Log Regular Servicing
-                  </span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-700 text-white">
-                    {kpis.regularServicingCount} Logged
-                  </span>
-                </div>
-                <p className="text-[11px] text-emerald-900/80">
-                  Start 300-Hr lube oil, filter kit &amp; radiator servicing ({scheduleSummaryCounts.overdue} overdue).
-                </p>
-              </button>
+                  {/* Viewer Card 4: Specialized Reports & PDF Archive */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenReportsArchive) {
+                        onOpenReportsArchive();
+                      } else if (filteredReports[0]) {
+                        onOpenReportPdf(filteredReports[0]);
+                      }
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <FileText className="w-4 h-4 text-slate-700 shrink-0" />
+                        Specialized Reports &amp; PDF
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                        11 Types
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Generate Center-wise, Parts History, Major/Minor Servicing &amp; Date Range PDFs.
+                    </p>
+                  </button>
 
-              {/* Action 5: Specialized Reports & PDF Archive */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (onOpenReportsArchive) {
-                    onOpenReportsArchive();
-                  } else if (filteredReports[0]) {
-                    onOpenReportPdf(filteredReports[0]);
-                  }
-                }}
-                className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <FileText className="w-4 h-4 text-slate-700 shrink-0" />
-                    Specialized Reports &amp; PDF
-                  </span>
-                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
-                    11 Types
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600">
-                  Generate Center-wise, Parts History, Major/Minor Servicing &amp; Date Range PDFs.
-                </p>
-              </button>
+                  {/* Viewer Card 5: Generator Fleet Matrix Status */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById('fleet-matrix-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <Building2 className="w-4 h-4 text-slate-700 shrink-0" />
+                        Fleet Matrix ({centers.length} Centers)
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                        {kpis.availabilityPct}% Ready
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Inspect 31 centers, 62 genset run hours, breaker ratings &amp; live readiness statuses.
+                    </p>
+                  </button>
 
-              {/* Action 6: Role-Specific Contextual Workflow */}
-              {activeQuickActionRole === 'Administrator' && (
-                <button
-                  type="button"
-                  onClick={() => onOpenRoleManagement?.()}
-                  className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                      <Shield className="w-4 h-4 text-slate-800 shrink-0" />
-                      Authorized Users &amp; RBAC
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-900 text-white">
-                      Admin
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Provision Firebase user UIDs, passwords &amp; admin edit/delete permissions.
-                  </p>
-                </button>
-              )}
-
-              {activeQuickActionRole === 'Chief Engineer' && (
-                <button
-                  type="button"
-                  onClick={() => onOpenNotificationsCenter?.()}
-                  className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                      <Bell className="w-4 h-4 text-amber-600 shrink-0" />
-                      Center Email Rules
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
-                      31 Centers
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Configure per-center recipient lists &amp; critical alarm email dispatch rules.
-                  </p>
-                </button>
-              )}
-
-              {activeQuickActionRole === 'Field Engineer' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextCritical = urgentPendingActions.allItems[0];
-                    if (nextCritical) {
+                  {/* Viewer Card 6: Export Audit Excel */}
+                  <button
+                    type="button"
+                    onClick={() => exportInspectionsToExcel(filteredReports, 'xlsx')}
+                    className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-700 shrink-0" />
+                        Export Audit Excel DB
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                        Read-Only
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Download filtered inspection, servicing &amp; breakdown ledger as standard XLSX.
+                    </p>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Action 1: Log New Breakdown */}
+                  <button
+                    type="button"
+                    onClick={() =>
                       onStartInspection(
-                        nextCritical.centerId,
-                        nextCritical.generatorId,
-                        nextCritical.recommendedFormCategory
-                      );
-                    } else {
-                      onStartInspection(undefined, undefined, 'REGULAR_INSPECTION');
+                        selectedCenterFilter !== 'ALL' ? selectedCenterFilter : undefined,
+                        undefined,
+                        'BREAKDOWN_REPORT'
+                      )
                     }
-                  }}
-                  className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                      <Plus className="w-4 h-4 text-emerald-700 shrink-0" />
-                      Dispatch Priority Unit
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900">
-                      Field
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Auto-load the top priority center &amp; generator directly into Step A.
-                  </p>
-                </button>
-              )}
+                    className="text-left p-3.5 rounded-lg border border-red-200 bg-red-50/60 hover:bg-red-100/70 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-900">
+                        <AlertOctagon className="w-4 h-4 text-red-600 shrink-0" />
+                        Log New Breakdown
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">
+                        Step A
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-red-900/80">
+                      Initiate emergency generator fault &amp; downtime rectification report ({kpis.breakdownReportCount} logged).
+                    </p>
+                  </button>
 
-              {activeQuickActionRole === 'Viewer' && (
-                <button
-                  type="button"
-                  onClick={() => exportInspectionsToExcel(filteredReports, 'xlsx')}
-                  className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-700 shrink-0" />
-                      Export Audit Excel DB
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
-                      Read-Only
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Download filtered inspection, servicing &amp; breakdown ledger as XLSX.
-                  </p>
-                </button>
+                  {/* Action 2: View Pending Inspections */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenActivitiesTab) {
+                        onOpenActivitiesTab();
+                      } else {
+                        setUrgentActionFilter('ALL');
+                      }
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                        <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                        View Pending Inspections
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-700 text-white">
+                        {urgentPendingActions.counts.all} Open
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/80">
+                      Inspect open error findings, action required items &amp; mark completion dates.
+                    </p>
+                  </button>
+
+                  {/* Action 3: Log PM (Regular Inspection) */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onStartInspection(
+                        selectedCenterFilter !== 'ALL' ? selectedCenterFilter : undefined,
+                        undefined,
+                        'REGULAR_INSPECTION'
+                      )
+                    }
+                    className="text-left p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <ClipboardCheck className="w-4 h-4 text-slate-800 shrink-0" />
+                        Log PM (Regular Inspection)
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                        {kpis.pmRegularInspectionCount} PM
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Start fresh Step A 25-point monthly routine inspection form for any center.
+                    </p>
+                  </button>
+
+                  {/* Action 4: Log Regular Servicing (300-Hr) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const topOverdue = generator300HrSchedules.find(
+                        (s) => s.urgency === 'OVERDUE'
+                      );
+                      onStartInspection(
+                        selectedCenterFilter !== 'ALL'
+                          ? selectedCenterFilter
+                          : topOverdue?.center.id,
+                        topOverdue?.generator.id,
+                        'REGULAR_SERVICING_300HR'
+                      );
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-950">
+                        <Wrench className="w-4 h-4 text-emerald-700 shrink-0" />
+                        Log Regular Servicing
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-700 text-white">
+                        {kpis.regularServicingCount} Logged
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-900/80">
+                      Start 300-Hr lube oil, filter kit &amp; radiator servicing ({scheduleSummaryCounts.overdue} overdue).
+                    </p>
+                  </button>
+
+                  {/* Action 5: Specialized Reports & PDF Archive */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenReportsArchive) {
+                        onOpenReportsArchive();
+                      } else if (filteredReports[0]) {
+                        onOpenReportPdf(filteredReports[0]);
+                      }
+                    }}
+                    className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <FileText className="w-4 h-4 text-slate-700 shrink-0" />
+                        Specialized Reports &amp; PDF
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                        11 Types
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Generate Center-wise, Parts History, Major/Minor Servicing &amp; Date Range PDFs.
+                    </p>
+                  </button>
+
+                  {/* Action 6: Role-Specific Contextual Workflow */}
+                  {activeQuickActionRole === 'Administrator' && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenRoleManagement?.()}
+                      className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                          <Shield className="w-4 h-4 text-slate-800 shrink-0" />
+                          Authorized Users &amp; RBAC
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                          Admin
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Provision Firebase user UIDs, passwords &amp; admin edit/delete permissions.
+                      </p>
+                    </button>
+                  )}
+
+                  {activeQuickActionRole === 'Chief Engineer' && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenNotificationsCenter?.()}
+                      className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                          <Bell className="w-4 h-4 text-amber-600 shrink-0" />
+                          Center Email Rules
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                          31 Centers
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Configure per-center recipient lists &amp; critical alarm email dispatch rules.
+                      </p>
+                    </button>
+                  )}
+
+                  {activeQuickActionRole === 'Field Engineer' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCritical = urgentPendingActions.allItems[0];
+                        if (nextCritical) {
+                          onStartInspection(
+                            nextCritical.centerId,
+                            nextCritical.generatorId,
+                            nextCritical.recommendedFormCategory
+                          );
+                        } else {
+                          onStartInspection(undefined, undefined, 'REGULAR_INSPECTION');
+                        }
+                      }}
+                      className="text-left p-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                          <Plus className="w-4 h-4 text-emerald-700 shrink-0" />
+                          Dispatch Priority Unit
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900">
+                          Field
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        Auto-load the top priority center &amp; generator directly into Step A.
+                      </p>
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

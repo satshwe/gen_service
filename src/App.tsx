@@ -1274,59 +1274,64 @@ export default function App() {
               Analytics
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setEditingReport(null);
-                setActiveFormCategory('REGULAR_INSPECTION');
-                setFormSessionKey((prev) => prev + 1);
-                setActiveModule('inspection_form');
-              }}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
-                activeModule === 'inspection_form' &&
-                activeFormCategory === 'REGULAR_INSPECTION'
-                  ? 'text-white font-semibold underline underline-offset-8 decoration-2'
-                  : 'hover:text-white'
-              }`}
-            >
-              Regular Inspection
-            </button>
+            {/* Inspection & Servicing Forms — Hidden for Viewer role */}
+            {currentUser.role !== 'Viewer' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingReport(null);
+                    setActiveFormCategory('REGULAR_INSPECTION');
+                    setFormSessionKey((prev) => prev + 1);
+                    setActiveModule('inspection_form');
+                  }}
+                  className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+                    activeModule === 'inspection_form' &&
+                    activeFormCategory === 'REGULAR_INSPECTION'
+                      ? 'text-white font-semibold underline underline-offset-8 decoration-2'
+                      : 'hover:text-white'
+                  }`}
+                >
+                  Regular Inspection
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setEditingReport(null);
-                setActiveFormCategory('REGULAR_SERVICING_300HR');
-                setFormSessionKey((prev) => prev + 1);
-                setActiveModule('inspection_form');
-              }}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
-                activeModule === 'inspection_form' &&
-                activeFormCategory === 'REGULAR_SERVICING_300HR'
-                  ? 'text-white font-semibold underline underline-offset-8 decoration-2'
-                  : 'hover:text-white'
-              }`}
-            >
-              300-Hr Servicing
-            </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingReport(null);
+                    setActiveFormCategory('REGULAR_SERVICING_300HR');
+                    setFormSessionKey((prev) => prev + 1);
+                    setActiveModule('inspection_form');
+                  }}
+                  className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+                    activeModule === 'inspection_form' &&
+                    activeFormCategory === 'REGULAR_SERVICING_300HR'
+                      ? 'text-white font-semibold underline underline-offset-8 decoration-2'
+                      : 'hover:text-white'
+                  }`}
+                >
+                  300-Hr Servicing
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setEditingReport(null);
-                setActiveFormCategory('BREAKDOWN_REPORT');
-                setFormSessionKey((prev) => prev + 1);
-                setActiveModule('inspection_form');
-              }}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
-                activeModule === 'inspection_form' &&
-                activeFormCategory === 'BREAKDOWN_REPORT'
-                  ? 'text-white font-semibold underline underline-offset-8 decoration-2'
-                  : 'hover:text-white'
-              }`}
-            >
-              Breakdown Form
-            </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingReport(null);
+                    setActiveFormCategory('BREAKDOWN_REPORT');
+                    setFormSessionKey((prev) => prev + 1);
+                    setActiveModule('inspection_form');
+                  }}
+                  className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+                    activeModule === 'inspection_form' &&
+                    activeFormCategory === 'BREAKDOWN_REPORT'
+                      ? 'text-white font-semibold underline underline-offset-8 decoration-2'
+                      : 'hover:text-white'
+                  }`}
+                >
+                  Breakdown Form
+                </button>
+              </>
+            )}
 
             <button
               type="button"
@@ -1355,22 +1360,26 @@ export default function App() {
 
           {/* Zone 3: Primary Action & Sign Out / Mobile Menu Button */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setMobileFormsSheetOpen(true)}
-              className="inline-flex md:hidden items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleStartNewInspection()}
-              className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Inspection
-            </button>
+            {currentUser.role !== 'Viewer' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setMobileFormsSheetOpen(true)}
+                  className="inline-flex md:hidden items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartNewInspection()}
+                  className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New Inspection
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={handleSignOut}
@@ -1397,104 +1406,106 @@ export default function App() {
         </div>
       </header>
 
-      {/* Secondary Workspace Utility Bar (Offline Status, Active RBAC Role, Master Assets & Official PDF) */}
-      <div className="no-print bg-white border-b border-slate-200 px-3 sm:px-8 py-2 overflow-x-auto scrollbar-none">
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-3 text-xs min-w-max md:min-w-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveModule('master_assets')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                activeModule === 'master_assets'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5" />
-              Master Assets ({centers.length} Centers / {generators.length} Gensets)
-            </button>
+      {/* Secondary Workspace Utility Bar (Admin Only — All tabs in attached photo strictly restricted to Admin) */}
+      {isAdmin && (
+        <div className="no-print bg-white border-b border-slate-200 px-3 sm:px-8 py-2 overflow-x-auto scrollbar-none">
+          <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-3 text-xs min-w-max md:min-w-0">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveModule('master_assets')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  activeModule === 'master_assets'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Database className="w-3.5 h-3.5" />
+                Master Assets ({centers.length} Centers / {generators.length} Gensets)
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedReportForPrint(reports[0] || INITIAL_REPORTS[0]);
-                setActiveModule('print_view');
-              }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                activeModule === 'print_view'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Official 2-Page PDF (#002048)
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedReportForPrint(reports[0] || INITIAL_REPORTS[0]);
+                  setActiveModule('print_view');
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  activeModule === 'print_view'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Official 2-Page PDF (#002048)
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveModule('offline_sync')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                activeModule === 'offline_sync'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              IndexedDB Sync ({syncQueue.length} Queued · {conflicts.length} Conflicts)
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveModule('offline_sync')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  activeModule === 'offline_sync'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                IndexedDB Sync ({syncQueue.length} Queued · {conflicts.length} Conflicts)
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveModule('notifications')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                activeModule === 'notifications'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              Push & Email Alerts ({unreadAlertsCount} Unread)
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveModule('notifications')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  activeModule === 'notifications'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                Push & Email Alerts ({unreadAlertsCount} Unread)
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveModule('role_management')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                activeModule === 'role_management'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Role: {currentUser.role}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => setActiveModule('role_management')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  activeModule === 'role_management'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Role: {currentUser.role}
+              </button>
+            </div>
 
-          {/* Right Quick Connectivity & Role Status */}
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setSimulatedOffline(!simulatedOffline)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                effectiveOnline
-                  ? 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
-                  : 'text-amber-900 bg-amber-100 hover:bg-amber-200'
-              }`}
-              title="Click to toggle Online / Offline Field Mode"
-            >
-              {effectiveOnline ? (
-                <>
-                  <Wifi className="w-3.5 h-3.5" /> Online (Synced)
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3.5 h-3.5" /> Offline Mode (IndexedDB)
-                </>
-              )}
-            </button>
+            {/* Right Quick Connectivity & Role Status */}
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSimulatedOffline(!simulatedOffline)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  effectiveOnline
+                    ? 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                    : 'text-amber-900 bg-amber-100 hover:bg-amber-200'
+                }`}
+                title="Click to toggle Online / Offline Field Mode"
+              >
+                {effectiveOnline ? (
+                  <>
+                    <Wifi className="w-3.5 h-3.5" /> Online (Synced)
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3.5 h-3.5" /> Offline Mode (IndexedDB)
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Live Real-Time In-App Push Toast Notification */}
       {livePushToast && (
@@ -1554,33 +1565,50 @@ export default function App() {
         )}
 
         {activeModule === 'inspection_form' && (
-          <div className="space-y-4">
-            {!canCreateOrEdit && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg text-xs flex items-center justify-between">
-                <span>
-                  Read-Only Viewer Mode Active: You can inspect the form layout, but saving changes requires <strong>Field Engineer</strong>, <strong>Chief Engineer</strong>, or <strong>Administrator</strong> role.
-                </span>
+          currentUser.role === 'Viewer' ? (
+            <div className="max-w-2xl mx-auto my-12 bg-white rounded-xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-700 mx-auto flex items-center justify-center">
+                <Shield className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Access Restricted (Viewer Account)</h3>
+              <p className="text-sm text-slate-600 font-myanmar">
+                Viewer အကောင့်များအတွက် Regular Inspection, 300-Hr Servicing နှင့် Breakdown forms များကို ကြည့်ရှုခွင့်/ရေးသွင်းခွင့် ပိတ်ထားပါသည်။ Field Engineer သို့မဟုတ် Administrator အကောင့်ဖြင့်သာ ဖောင်များ ရေးသွင်းနိုင်ပါသည်။
+              </p>
+              <p className="text-xs text-slate-500">
+                Forms are restricted to Field Engineers, Chief Engineers, and System Administrators. Viewers have read-only access to Analytics, Activity Status, and Official Reports.
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setActiveModule('role_management')}
-                  className="font-semibold underline shrink-0 ml-4"
+                  onClick={() => setActiveModule('dashboard')}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
                 >
-                  Switch Role
+                  Return to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveModule('reports_archive')}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  View Reports &amp; PDF
                 </button>
               </div>
-            )}
-            <InspectionFormModule
-              centers={centers}
-              generators={generators}
-              initialReport={editingReport}
-              initialFormCategory={activeFormCategory}
-              formSessionKey={formSessionKey}
-              nextReportNo={nextReportNo}
-              onSaveReport={handleSaveReport}
-              onCancelEdit={() => setActiveModule('reports_archive')}
-              currentUserRole={currentUser.role}
-            />
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <InspectionFormModule
+                centers={centers}
+                generators={generators}
+                initialReport={editingReport}
+                initialFormCategory={activeFormCategory}
+                formSessionKey={formSessionKey}
+                nextReportNo={nextReportNo}
+                onSaveReport={handleSaveReport}
+                onCancelEdit={() => setActiveModule('reports_archive')}
+                currentUserRole={currentUser.role}
+              />
+            </div>
+          )
         )}
 
         {activeModule === 'activities' && (
@@ -1734,18 +1762,20 @@ export default function App() {
           <span>Analytics</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setMobileFormsSheetOpen(true)}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-lg text-[10px] font-semibold transition-colors min-w-[56px] min-h-[44px] ${
-            activeModule === 'inspection_form'
-              ? 'text-white bg-slate-800'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <ClipboardCheck className="w-4 h-4 shrink-0" />
-          <span>Forms</span>
-        </button>
+        {currentUser.role !== 'Viewer' && (
+          <button
+            type="button"
+            onClick={() => setMobileFormsSheetOpen(true)}
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-lg text-[10px] font-semibold transition-colors min-w-[56px] min-h-[44px] ${
+              activeModule === 'inspection_form'
+                ? 'text-white bg-slate-800'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <ClipboardCheck className="w-4 h-4 shrink-0" />
+            <span>Forms</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -1914,134 +1944,199 @@ export default function App() {
               </button>
             </div>
 
-            {/* Online / Offline Status Toggle on Mobile */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950/50">
-              <button
-                type="button"
-                onClick={() => setSimulatedOffline(!simulatedOffline)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg text-xs font-semibold transition-colors min-h-[44px] ${
-                  effectiveOnline
-                    ? 'bg-emerald-950/60 border border-emerald-700/50 text-emerald-300'
-                    : 'bg-amber-950/60 border border-amber-700/50 text-amber-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {effectiveOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-                  <span>{effectiveOnline ? 'Online (Real-Time Cloud Synced)' : 'Offline Mode (Local Storage)'}</span>
-                </div>
-                <span className="text-[10px] font-mono uppercase underline">Toggle</span>
-              </button>
-            </div>
+            {/* Online / Offline Status Toggle on Mobile (Admin only) */}
+            {isAdmin && (
+              <div className="p-4 border-b border-slate-800 bg-slate-950/50">
+                <button
+                  type="button"
+                  onClick={() => setSimulatedOffline(!simulatedOffline)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg text-xs font-semibold transition-colors min-h-[44px] ${
+                    effectiveOnline
+                      ? 'bg-emerald-950/60 border border-emerald-700/50 text-emerald-300'
+                      : 'bg-amber-950/60 border border-amber-700/50 text-amber-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {effectiveOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                    <span>{effectiveOnline ? 'Online (Real-Time Cloud Synced)' : 'Offline Mode (Local Storage)'}</span>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase underline">Toggle</span>
+                </button>
+              </div>
+            )}
 
             {/* Navigation & Tools List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1.5 text-xs font-medium">
               <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500 px-3 py-1">
-                Asset & System Tools
+                Navigation
               </div>
 
               <button
                 type="button"
                 onClick={() => {
-                  setActiveModule('master_assets');
+                  setActiveModule('dashboard');
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
-                  activeModule === 'master_assets'
+                  activeModule === 'dashboard'
                     ? 'bg-white text-slate-900 font-bold'
                     : 'text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Database className="w-4 h-4 shrink-0" />
-                  <span>Master Assets Directory</span>
+                  <BarChart3 className="w-4 h-4 shrink-0" />
+                  <span>Executive Analytics</span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">{centers.length} Centers</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setActiveModule('notifications');
+                  setActiveModule('activities');
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
-                  activeModule === 'notifications'
+                  activeModule === 'activities'
                     ? 'bg-white text-slate-900 font-bold'
                     : 'text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bell className="w-4 h-4 shrink-0" />
-                  <span>Push & Email Alerts</span>
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span>Activities &amp; Action Items</span>
                 </div>
-                {unreadAlertsCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-red-600 text-white rounded-full">
-                    {unreadAlertsCount}
-                  </span>
-                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setActiveModule('offline_sync');
+                  setActiveModule('reports_archive');
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
-                  activeModule === 'offline_sync'
+                  activeModule === 'reports_archive' || activeModule === 'print_view'
                     ? 'bg-white text-slate-900 font-bold'
                     : 'text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <RefreshCw className={`w-4 h-4 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>Cloud & IndexedDB Sync</span>
+                  <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                  <span>Reports &amp; PDF Archive</span>
                 </div>
-                {syncQueue.length > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-amber-500 text-slate-950 rounded">
-                    {syncQueue.length} queued
-                  </span>
-                )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedReportForPrint(reports[0] || INITIAL_REPORTS[0]);
-                  setActiveModule('print_view');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
-                  activeModule === 'print_view'
-                    ? 'bg-white text-slate-900 font-bold'
-                    : 'text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Printer className="w-4 h-4 shrink-0" />
-                  <span>Official 2-Page Print View</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
+              {/* Administrative tools from attached photo restricted strictly to Administrator */}
+              {isAdmin && (
+                <>
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-amber-500/80 px-3 py-1 pt-3">
+                    Admin Tools (System Utility Bar)
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModule('role_management');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
-                  activeModule === 'role_management'
-                    ? 'bg-white text-slate-900 font-bold'
-                    : 'text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Shield className="w-4 h-4 shrink-0" />
-                  <span>User & Role Management</span>
-                </div>
-                <span className="text-[10px] font-mono text-emerald-400">{currentUser.role}</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule('master_assets');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                      activeModule === 'master_assets'
+                        ? 'bg-white text-slate-900 font-bold'
+                        : 'text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Database className="w-4 h-4 shrink-0" />
+                      <span>Master Assets Directory</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400">{centers.length} Centers</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule('notifications');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                      activeModule === 'notifications'
+                        ? 'bg-white text-slate-900 font-bold'
+                        : 'text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Bell className="w-4 h-4 shrink-0" />
+                      <span>Push & Email Alerts</span>
+                    </div>
+                    {unreadAlertsCount > 0 && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-red-600 text-white rounded-full">
+                        {unreadAlertsCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule('offline_sync');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                      activeModule === 'offline_sync'
+                        ? 'bg-white text-slate-900 font-bold'
+                        : 'text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <RefreshCw className={`w-4 h-4 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span>Cloud & IndexedDB Sync</span>
+                    </div>
+                    {syncQueue.length > 0 && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-amber-500 text-slate-950 rounded">
+                        {syncQueue.length} queued
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedReportForPrint(reports[0] || INITIAL_REPORTS[0]);
+                      setActiveModule('print_view');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                      activeModule === 'print_view'
+                        ? 'bg-white text-slate-900 font-bold'
+                        : 'text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Printer className="w-4 h-4 shrink-0" />
+                      <span>Official 2-Page Print View</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule('role_management');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                      activeModule === 'role_management'
+                        ? 'bg-white text-slate-900 font-bold'
+                        : 'text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Shield className="w-4 h-4 shrink-0" />
+                      <span>User & Role Management</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400">{currentUser.role}</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Drawer Footer Actions */}
