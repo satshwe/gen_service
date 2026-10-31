@@ -27,12 +27,20 @@ import {
   FileText,
   Bell,
   Building2,
+  Layers,
+  Phone,
+  User,
+  Activity,
+  ExternalLink,
 } from 'lucide-react';
 import { Center, GeneratorAsset, InspectionReport, FormCategory, UserRole, DutyAssignment } from '../types';
 import {
   exportInspectionsToExcel,
   formatDateDDMMYYYY,
   extractErrorAndActionActivities,
+  getActiveSectorDirectory,
+  getSectorForCenter,
+  SectorInfo,
 } from '../utils/exportUtils';
 import { parseRunningHoursToDecimal, addRunningHours } from '../data/checklistConfig';
 
@@ -105,12 +113,66 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
   const [calendarUrgencyFilter, setCalendarUrgencyFilter] = useState<'ALL' | 'OVERDUE' | 'DUE_SOON' | 'ON_TRACK'>('ALL');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
+  // 3-Tier Management View State (Requested by Management):
+  // 1. EXECUTIVE (Fleet Overview)
+  // 2. SECTORS (Sector Management)
+  // 3. CENTERS (Center Management)
+  const [managementViewTier, setManagementViewTier] = useState<'EXECUTIVE' | 'SECTORS' | 'CENTERS'>('EXECUTIVE');
+  const [activeSectorManagement, setActiveSectorManagement] = useState<string>('ALL');
+  const [activeCenterManagementId, setActiveCenterManagementId] = useState<string>(centers[0]?.id || '');
+
   // Executive Quick-View Summary State
   const [urgentActionFilter, setUrgentActionFilter] = useState<'ALL' | 'CRITICAL' | 'ACTION_REQUIRED' | 'OVERDUE_300HR'>('ALL');
   const [throughputDisplayMode, setThroughputDisplayMode] = useState<'CHART' | 'TABLE'>('CHART');
   const [quickActionRoleOverride, setQuickActionRoleOverride] = useState<UserRole | null>(null);
-
   const activeQuickActionRole: UserRole = quickActionRoleOverride || currentUserRole;
+
+  const sectorDirectory = useMemo(() => getActiveSectorDirectory(), []);
+
+  const sectorManagementData = useMemo(() => {
+    return sectorDirectory.map((sec) => {
+      const sectorCenters = centers.filter(
+        (c) => getSectorForCenter(c.centerCode).sectorName === sec.sectorName
+      );
+      const sectorCenterIds = new Set(sectorCenters.map((c) => c.id));
+      const sectorGenerators = generators.filter((g) => sectorCenterIds.has(g.centerId));
+      const sectorReports = reports.filter((r) => sectorCenterIds.has(r.centerId));
+      const sectorCriticalCount = sectorReports.filter((r) => r.readinessStatus === 'Critical').length;
+      const sectorActionCount = sectorReports.filter((r) => r.readinessStatus === 'Action Required').length;
+      const sectorAvailPct =
+        sectorGenerators.length > 0
+          ? (((sectorGenerators.length - sectorCriticalCount * 0.25) / sectorGenerators.length) * 100).toFixed(1)
+          : '100.0';
+
+      return {
+        sector: sec,
+        centers: sectorCenters,
+        generators: sectorGenerators,
+        reports: sectorReports,
+        criticalCount: sectorCriticalCount,
+        actionCount: sectorActionCount,
+        availabilityPct: sectorAvailPct,
+      };
+    });
+  }, [sectorDirectory, centers, generators, reports]);
+
+  const activeCenterDetail = useMemo(() => {
+    const target = centers.find((c) => c.id === activeCenterManagementId) || centers[0];
+    if (!target) return null;
+    const centerGens = generators.filter((g) => g.centerId === target.id);
+    const centerReports = reports.filter((r) => r.centerId === target.id);
+    const latestReport = centerReports[0];
+    const sec = getSectorForCenter(target.centerCode);
+    const centerDuties = dutyAssignments.filter((d) => d.centerId === target.id);
+    return {
+      center: target,
+      sector: sec,
+      generators: centerGens,
+      reports: centerReports,
+      latestReport,
+      duties: centerDuties,
+    };
+  }, [activeCenterManagementId, centers, generators, reports, dutyAssignments]);
 
   const inspectorsList = useMemo(() => {
     const set = new Set<string>();
@@ -844,6 +906,379 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
         </div>
       </div>
 
+      {/* 3-Tier Management Level Selector: Management / Sector Management / Center Management */}
+      <div className="bg-slate-900 text-white rounded-xl p-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs text-xs font-semibold">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setManagementViewTier('EXECUTIVE')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
+              managementViewTier === 'EXECUTIVE'
+                ? 'bg-white text-slate-900 font-bold shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Gauge className="w-4 h-4 text-teal-400" />
+            <span>1. Executive Fleet View</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setManagementViewTier('SECTORS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
+              managementViewTier === 'SECTORS'
+                ? 'bg-white text-slate-900 font-bold shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-blue-400" />
+            <span>2. Sector Management View ({sectorManagementData.length} Sectors)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setManagementViewTier('CENTERS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
+              managementViewTier === 'CENTERS'
+                ? 'bg-white text-slate-900 font-bold shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Building2 className="w-4 h-4 text-emerald-400" />
+            <span>3. Center Management View</span>
+          </button>
+        </div>
+
+        <div className="hidden lg:flex items-center gap-2 px-3 text-[11px] text-slate-400 font-mono">
+          <span>Active Fleet: {generators.length} Gensets · {centers.length} Centers</span>
+        </div>
+      </div>
+
+      {/* SECTOR MANAGEMENT VIEW */}
+      {managementViewTier === 'SECTORS' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-mono uppercase tracking-wider text-teal-600 font-bold">
+                Cluster &amp; Regional Portfolio Oversight
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mt-0.5">
+                Sector Management Performance Matrix
+              </h3>
+              <p className="text-xs text-slate-500 font-myanmar">
+                လုပ်ငန်းခွဲ (Sectors) အလိုက် မီးစက်များ၏ Operational Status၊ လစဉ် စစ်ဆေးပြီးစီးမှုနှင့် စောင့်ကြည့်ရမည့် အချက်များ
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={activeSectorManagement}
+                onChange={(e) => setActiveSectorManagement(e.target.value)}
+                className="px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
+              >
+                <option value="ALL">All Sectors ({sectorManagementData.length})</option>
+                {sectorManagementData.map((d) => (
+                  <option key={d.sector.sectorName} value={d.sector.sectorName}>
+                    {d.sector.sectorName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sectorManagementData
+              .filter(
+                (d) =>
+                  activeSectorManagement === 'ALL' ||
+                  d.sector.sectorName === activeSectorManagement
+              )
+              .map((d) => {
+                const overdue300HrCount = generator300HrSchedules.filter(
+                  (s) =>
+                    s.urgency === 'OVERDUE' &&
+                    d.centers.some((c) => c.id === s.center.id)
+                ).length;
+
+                return (
+                  <div
+                    key={d.sector.sectorName}
+                    className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 flex flex-col justify-between hover:border-slate-300 transition-colors"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div>
+                          <span className="font-bold text-base text-slate-900">
+                            {d.sector.sectorName}
+                          </span>
+                          <div className="text-xs text-slate-500 font-medium mt-0.5">
+                            {d.sector.sectorLeadTitle}
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-slate-900 text-white shrink-0">
+                          {d.availabilityPct}% Ready
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="text-[10px] font-semibold text-slate-500 uppercase">Centers</div>
+                          <div className="text-lg font-bold font-mono text-slate-900">{d.centers.length}</div>
+                        </div>
+                        <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="text-[10px] font-semibold text-slate-500 uppercase">Gensets</div>
+                          <div className="text-lg font-bold font-mono text-slate-900">{d.generators.length}</div>
+                        </div>
+                        <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="text-[10px] font-semibold text-slate-500 uppercase">300-Hr Overdue</div>
+                          <div
+                            className={`text-lg font-bold font-mono ${
+                              overdue300HrCount > 0 ? 'text-amber-700' : 'text-slate-900'
+                            }`}
+                          >
+                            {overdue300HrCount}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span>Critical Breakdown Alarms:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              d.criticalCount > 0 ? 'text-red-600' : 'text-slate-700'
+                            }`}
+                          >
+                            {d.criticalCount}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600">
+                          <span>Action Required Items:</span>
+                          <span className="font-mono font-bold text-slate-800">{d.actionCount}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono truncate pt-1 border-t border-slate-100">
+                          <span className="font-semibold text-slate-700">Email: </span>
+                          {d.sector.defaultRecipients}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                        Assigned Centers ({d.centers.length}):
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {d.centers.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveCenterManagementId(c.id);
+                              setManagementViewTier('CENTERS');
+                            }}
+                            className="px-2 py-1 text-[11px] font-mono font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded transition-colors"
+                            title={`Click to view Center Management Profile for ${c.centerName}`}
+                          >
+                            {c.centerCode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* CENTER MANAGEMENT VIEW */}
+      {managementViewTier === 'CENTERS' && activeCenterDetail && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-mono uppercase tracking-wider text-teal-600 font-bold">
+                Commercial Center Asset &amp; Operations Profile
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mt-0.5">
+                {activeCenterDetail.center.centerCode} — {activeCenterDetail.center.centerName}
+              </h3>
+              <p className="text-xs text-slate-500 font-myanmar">
+                စင်တာမန်နေဂျာနှင့် အင်ဂျင်နီယာများ တိုက်ရိုက်ကြည့်ရှုနိုင်သော သက်ဆိုင်ရာ Center ၏ မီးစက်ကျန်းမာရေး၊ လောင်စာဆီနှင့် နောက်ဆုံးစစ်ဆေးမှုမှတ်တမ်း
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 sm:w-80">
+              <select
+                value={activeCenterManagementId}
+                onChange={(e) => setActiveCenterManagementId(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg bg-white focus:ring-1 focus:ring-slate-900"
+              >
+                {centers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.centerCode} — {c.centerName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Card: Center & Manager Contact Details */}
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Facility Information
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                  {activeCenterDetail.sector.sectorName}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div>
+                  <span className="text-slate-500">Center Name: </span>
+                  <span className="font-bold text-slate-900">{activeCenterDetail.center.centerName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Address: </span>
+                  <span className="text-slate-700">{activeCenterDetail.center.address}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Township / Region: </span>
+                  <span className="text-slate-700">
+                    {activeCenterDetail.center.township} ({activeCenterDetail.center.region})
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Center Facility Lead: {activeCenterDetail.center.contactPerson}</span>
+                  </div>
+                  <div className="font-mono text-slate-600 flex items-center gap-1.5 mt-1">
+                    <Phone className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{activeCenterDetail.center.contactPhone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {activeCenterDetail.latestReport && (
+                <div className="pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => onOpenReportPdf(activeCenterDetail.latestReport!)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>View Latest Official Report PDF (#{activeCenterDetail.latestReport.reportNo})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Right Panel (2 cols): Generators Installed & Live Parameters */}
+            <div className="lg:col-span-2 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Gensets On-Site ({activeCenterDetail.generators.length} Units)
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeCenterDetail.generators.map((gen) => {
+                  const genSchedule = generator300HrSchedules.find((s) => s.generator.id === gen.id);
+                  const genReports = reports.filter((r) => r.generatorId === gen.id);
+                  const latestGenReport = genReports[0];
+
+                  return (
+                    <div
+                      key={gen.id}
+                      className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
+                        <div>
+                          <div className="font-bold text-sm text-slate-900">{gen.generatorLabel}</div>
+                          <div className="font-mono text-xs font-bold text-teal-700">{gen.kvaRating}</div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            gen.status === 'Active'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : gen.status === 'Standby'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {gen.status}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-xs text-slate-600">
+                        <div>
+                          <span className="font-semibold text-slate-700">Engine: </span>
+                          {gen.engineModel} (SN: {gen.engineSerialNo || '-'})
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-700">Alternator: </span>
+                          {gen.alternatorModel} (Ctrl: {gen.controllerModel})
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-700">Circuit Breaker: </span>
+                          <span className="font-mono">
+                            {gen.breakerType} {gen.breakerPoles} {gen.breakerAmpRating}A
+                          </span>
+                        </div>
+                      </div>
+
+                      {latestGenReport && (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5 text-xs">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Operating Parameters ({formatDateDDMMYYYY(latestGenReport.inspectionDate)})
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                            <div>
+                              Running Hours: <span className="font-bold text-slate-900">{latestGenReport.parameters.runningHours}h</span>
+                            </div>
+                            <div>
+                              Oil Pressure: <span className="font-bold text-slate-900">{latestGenReport.parameters.engineOilPressureBar} Bar</span>
+                            </div>
+                            <div>
+                              Coolant Temp: <span className="font-bold text-slate-900">{latestGenReport.parameters.engineOilTempC}°C</span>
+                            </div>
+                            <div>
+                              Voltage L1-L2: <span className="font-bold text-slate-900">{latestGenReport.parameters.voltageL1L2}V</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {genSchedule && (
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="text-slate-500">300-Hr Servicing: </span>
+                            <span className="font-mono font-bold text-slate-900">{genSchedule.nextServiceDueHours}h</span>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              genSchedule.urgency === 'OVERDUE'
+                                ? 'bg-red-100 text-red-800'
+                                : genSchedule.urgency === 'DUE_SOON'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-emerald-50 text-emerald-800'
+                            }`}
+                          >
+                            {genSchedule.urgency}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXECUTIVE MANAGEMENT FLEET VIEW */}
+      {managementViewTier === 'EXECUTIVE' && (
+        <>
       {/* 7 Executive KPI Cards (including PM Regular Inspection Count & Regular Servicing Count) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
         <div className="bg-white border border-slate-200 rounded-lg p-4">
@@ -2804,6 +3239,8 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -105,6 +105,7 @@ import { ExecutiveDashboardModule } from './components/ExecutiveDashboardModule'
 import { DutyCalendarModule } from './components/DutyCalendarModule';
 import { InspectionFormModule } from './components/InspectionFormModule';
 import { ReportsArchiveModule } from './components/ReportsArchiveModule';
+import { SetupModule } from './components/SetupModule';
 import { MasterAssetModule } from './components/MasterAssetModule';
 import { OfficialReportPrintView } from './components/OfficialReportPrintView';
 import { OfflineSyncCenterModule } from './components/OfflineSyncCenterModule';
@@ -121,6 +122,7 @@ type ActiveModule =
   | 'inspection_form'
   | 'activities'
   | 'reports_archive'
+  | 'setup'
   | 'master_assets'
   | 'print_view'
   | 'offline_sync'
@@ -1526,6 +1528,20 @@ export default function App() {
             >
               Reports & PDF
             </button>
+
+            {isAdminOrChief && (
+              <button
+                type="button"
+                onClick={() => setActiveModule('setup')}
+                className={`py-1 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  activeModule === 'setup'
+                    ? 'text-white font-semibold underline underline-offset-8 decoration-2'
+                    : 'text-teal-300 hover:text-white'
+                }`}
+              >
+                <span>Setup & Assets</span>
+              </button>
+            )}
           </nav>
 
           {/* Zone 3: Primary Action & Sign Out / Mobile Menu Button */}
@@ -1825,6 +1841,24 @@ export default function App() {
               handleStartNewInspection(undefined, undefined, cat || 'REGULAR_INSPECTION')
             }
             currentUserRole={currentUser.role}
+          />
+        )}
+
+        {activeModule === 'setup' && (
+          <SetupModule
+            centers={centers}
+            generators={generators}
+            usersDirectory={usersDirectory}
+            currentUser={currentUser}
+            onSaveCenter={handleSaveCenter}
+            onDeleteCenter={handleDeleteCenter}
+            onSaveGenerator={handleSaveGenerator}
+            onDeleteGenerator={handleDeleteGenerator}
+            onBulkUpdateAssets={handleBulkUpdateAssets}
+            onUpdateUserRole={handleUpdateUserRole}
+            onUpdateUserPassword={handleUpdateUserPassword}
+            onAddDirectoryUser={handleAddDirectoryUser}
+            onDeleteDirectoryUser={handleDeleteDirectoryUser}
           />
         )}
 
@@ -2238,6 +2272,27 @@ export default function App() {
                   <span>Reports &amp; PDF Archive</span>
                 </div>
               </button>
+
+              {isAdminOrChief && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModule('setup');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors min-h-[44px] ${
+                    activeModule === 'setup'
+                      ? 'bg-white text-slate-900 font-bold'
+                      : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Database className="w-4 h-4 shrink-0 text-teal-400" />
+                    <span>Setup &amp; Master Assets</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">Sectors &bull; Email</span>
+                </button>
+              )}
 
               {/* Administrative tools from attached photo restricted strictly to Administrator */}
               {isAdmin && (
