@@ -1148,6 +1148,7 @@ export default function App() {
   };
 
   const handleSwitchActiveRole = (role: UserRole) => {
+    if (currentUser.role !== 'Administrator') return;
     setCurrentUser((prev) => {
       const updated = { ...prev, role };
       sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(updated));
@@ -1231,7 +1232,6 @@ export default function App() {
   if (!isSessionAuthenticated) {
     return (
       <LoginPage
-        usersDirectory={usersDirectory}
         onLoginWithCredentials={handleLoginWithCredentials}
         onSignInWithGoogle={handleSignInWithGoogle}
       />

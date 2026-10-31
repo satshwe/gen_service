@@ -361,5 +361,13 @@ service cloud.firestore {
 
       allow delete: if isValidId(configId) && (isAdmin() || resource.data.id == configId);
     }
+
+    // =========================================================================
+    // COLLECTION 8: /test/{docId} (Connection Verification Probe)
+    // =========================================================================
+    match /test/{docId} {
+      allow get: if true;
+      allow list: if false;
+    }
   }
 }

@@ -1346,25 +1346,27 @@ export const ExecutiveDashboardModule: React.FC<ExecutiveDashboardModuleProps> =
                 </p>
               </div>
 
-              {/* Role Context Selector */}
-              <div className="inline-flex flex-wrap items-center gap-1 p-1 bg-slate-200/70 rounded-lg text-xs shrink-0 self-start sm:self-center">
-                {(['Administrator', 'Chief Engineer', 'Field Engineer', 'Viewer'] as UserRole[]).map(
-                  (roleOption) => (
-                    <button
-                      key={roleOption}
-                      type="button"
-                      onClick={() => setQuickActionRoleOverride(roleOption)}
-                      className={`px-2 py-1 font-semibold rounded transition-colors whitespace-nowrap ${
-                        activeQuickActionRole === roleOption
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-700 hover:text-slate-900'
-                      }`}
-                    >
-                      {roleOption}
-                    </button>
-                  )
-                )}
-              </div>
+              {/* Role Context Selector (Administrator Only) */}
+              {currentUserRole === 'Administrator' && (
+                <div className="inline-flex flex-wrap items-center gap-1 p-1 bg-slate-200/70 rounded-lg text-xs shrink-0 self-start sm:self-center">
+                  {(['Administrator', 'Chief Engineer', 'Field Engineer', 'Viewer'] as UserRole[]).map(
+                    (roleOption) => (
+                      <button
+                        key={roleOption}
+                        type="button"
+                        onClick={() => setQuickActionRoleOverride(roleOption)}
+                        className={`px-2 py-1 font-semibold rounded transition-colors whitespace-nowrap ${
+                          activeQuickActionRole === roleOption
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-700 hover:text-slate-900'
+                        }`}
+                      >
+                        {roleOption}
+                      </button>
+                    )
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Service Form Count Strip: PM (Regular Inspection) Count & Regular Servicing Count */}

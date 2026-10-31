@@ -467,6 +467,10 @@
     "/appConfigs/{configId}": {
       "schema": { "$ref": "#/entities/AppConfigRecord" },
       "description": "Cloud-synced Sector Names, Admin Form Customizations, and Center Email Rules."
+    },
+    "/test/{docId}": {
+      "schema": { "$ref": "#/entities/AppConfigRecord" },
+      "description": "Connection test probe document."
     }
   }
 }
